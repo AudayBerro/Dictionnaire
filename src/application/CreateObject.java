@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import javafx.collections.FXCollections;
@@ -46,14 +47,14 @@ public class CreateObject {
 	private ComboBox<String> comboBoxObjectCLass;//liste de classes qu'on peut instancier
 	private ObservableList<String> availableClassList;//liste de classes qu'on peut instancier
 	private StringBuilder messageErreur; //contient la liste des erreur trouver par la methode verifierFormulaire()
-	private List<String> temporaryObjectNameList;
 	private List<String> dynamicObjectFieldTypeList;//contient la liste des types de l'objet a instancier ex:int-string-int-int
 	private List<String> dynamicObjectFieldNameList;//contient le nom de chaque champs qu l'utilisateur a choisi
 	private List<TextField>  dynamicObjectFieldValueList;//contient les valeurs entrees par le user pour chaque champ
+	private HashMap<Integer,Object> temporaryPool;
+	private HashMap<String,Integer> temporaryObjectNameList;
 	
-	
-	//contient la liste de toutes les classes java presentes dans le repertoir courant
-	public  CreateObject(Stage owner,List<String> objectNameList){
+	//objectNameList contiendera la liste de tout les objets qui seront creer
+	public  CreateObject(Stage owner,HashMap<String,Integer> objectNameList,HashMap<Integer,Object> pool){
 		primaryStage = new Stage();
 		primaryStage.initModality(Modality.APPLICATION_MODAL);
 		primaryStage.initOwner(owner);// Specifies the owner Window (parent) for new window
@@ -63,10 +64,15 @@ public class CreateObject {
 		dynamicObjectFieldNameList=new ArrayList<String>();
 		dynamicObjectFieldValueList=new ArrayList<TextField>();
 		
-		temporaryObjectNameList = new ArrayList<String>();
+		temporaryObjectNameList = new HashMap<String,Integer>();
 		  //si la liste des noms n'est pas vide on ajoute tout les noms
 		  if(!(objectNameList.isEmpty()))
-		    temporaryObjectNameList.addAll(objectNameList);
+		    temporaryObjectNameList.putAll(objectNameList);
+		 
+		temporaryPool = new HashMap<Integer,Object>();
+		  //si le pool n'est pas vide on ajoute tout sont contenus au pool temporaire
+		  if(!(pool.isEmpty()))
+		    temporaryPool.putAll(pool);
 		  
 		comboBoxObjectCLass = new ComboBox<String>();
 		availableClassList=this.getAvailableCLass();
@@ -76,7 +82,7 @@ public class CreateObject {
 		newObjectName = new TextField();
 		  //show error message if the class name exist else show: Create New Java Class
 		  newObjectName.textProperty().addListener((observable,oldvalue,newvalue)->{
-			  if(objectNameList.contains(newvalue))
+			  if(objectNameList.containsKey(newvalue))
 				  errorTexte.setText("Object name \""+newObjectName.getText()+"\" already exist");
 			  else if(newObjectName.getText().contains(" "))
 				  errorTexte.setText("Invalid object name, must not start or end with a blank");
@@ -93,19 +99,24 @@ public class CreateObject {
 	     finish.setOnAction(new EventHandler<ActionEvent>(){
 		      public void handle(ActionEvent e){
 		    	  if(verifierFormulaire()){
-		    		 try {
+		    	    try {
 						dynamicClassCall();
-					} catch (ClassNotFoundException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}//afin de remplir les 3 listes
-		    		// createNewObject(newObjectName.getText());//cette fonction prendra les parametres des trois listes remplie par dynamicClassCall()
+					    //afin de remplir les 3 listes
+		    		    //createNewObject(newObjectName.getText());
+						//cette fonction prendra les parametres des trois listes remplie par dynamicClassCall()
 		    		 
-		    		 //ajouter le nouveau nom a la liste de nom
-		    		  objectNameList.clear();
-		    		  objectNameList.addAll(temporaryObjectNameList);
-		    		 //ajouter le nouvel objet au pool
-		    	     //primaryStage.close(); // return to main window
+		    		    //ajouter le nouveau nom a la liste de nom
+		    		    objectNameList.clear();
+		    		    objectNameList.putAll(temporaryObjectNameList);
+		    		    //ajouter le nouvel objet au pool
+		    		    pool.clear();
+		    		    pool.putAll(temporaryPool);
+		    	        primaryStage.close(); // return to main window
+		    		 } 
+		    	     catch (ClassNotFoundException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+				     }
 		    	  }
 		    	  else{
 		    		  Alert alert = new Alert(AlertType.ERROR);
@@ -205,19 +216,17 @@ public class CreateObject {
       list.add("-- Choisir une classe --");
 
       File[] files = new File("./bin/fichierCreer").listFiles();
-      for (File file : files) {
-          if (file.isFile()) {
+      for (File file : files) 
+          if (file.isFile()) 
         	  list.add(file.getName().replace(".class",""));
-        	  System.out.println(">> -"+file.getName().replace(".class","")+"-");
-          }
-      }
+      
       return list;
   }
   
   //si l'objet est valide par la fonction verifier formulaire on ajoute son nom a la liste des nom
-  public void addObjectName(String name){
+  public void addObjectName(String name,int signature){
 	  
-	  temporaryObjectNameList.add(name);
+	  temporaryObjectNameList.put(name,signature);
   }
   
   public VBox getAttributField(){
@@ -298,10 +307,10 @@ public class CreateObject {
 	//...dynamicObjectFieldTypeList ====> rempli par getAttributField()
 	//...dynamicObjectFieldNameList ====> rempli par getAttributField()
 	//...dynamicObjectFieldValueList ====> valeur entree par l'utilisateur
-	 // Class c = Class.forName("org.wikibooks.fr.Livre"); // Accès à la classe Livre
+	 // Class c = Class.forName("org.wikibooks.fr.Livre"); // AccÃ¨s Ã  la classe Livre
      //Constructor constr = c.getConstructor(String.class, int.class); // Obtenir le constructeur (String, int)
      //Object o = constr.newInstance("Programmation Java", 120); // -> new Livre("Programmation Java", 120);
-
+    int signature=-2;
 	Class maClasse= Class.forName("fichierCreer."+comboBoxObjectCLass.getSelectionModel().getSelectedItem());
 	Constructor[] constructeur = maClasse.getConstructors();
 	for(Constructor cts:constructeur)
@@ -311,32 +320,69 @@ public class CreateObject {
     	try {
     		Object[] listeDesValeur= new Object[dynamicObjectFieldValueList.size()];
     		if(!dynamicObjectFieldValueList.isEmpty()){
-    			for(int i=0;i<dynamicObjectFieldValueList.size();i++){
-    			  if(dynamicObjectFieldTypeList.get(i)=="String"){
-    				listeDesValeur[i]=dynamicObjectFieldValueList.get(i).getText();
-    			  }
-    			  else{
-    				if(dynamicObjectFieldTypeList.get(i)=="int")
-    				  listeDesValeur[i]=Integer.valueOf(dynamicObjectFieldValueList.get(i).getText());//convertir string en int
-    				else 
-    				  listeDesValeur[i]=Float.valueOf(dynamicObjectFieldValueList.get(i).getText());//convertir string en float
-    			  } 
+    		  for(int i=0;i<dynamicObjectFieldValueList.size();i++){
+    		    if(dynamicObjectFieldTypeList.get(i)=="String"){
+    			  listeDesValeur[i]=dynamicObjectFieldValueList.get(i).getText();
     			}
-    			System.out.println("%%%%% taille: "+listeDesValeur.length);
-    			for(int k=0;k<listeDesValeur.length;k++)
-    				System.out.println("%%%%%: "+listeDesValeur[k].getClass()+" - toString: "+listeDesValeur[k].toString());
-    			objet=constructeur[0].newInstance(listeDesValeur);
-    		}
-    		else{//si le constructeur n'a pas de parametre
-    			objet=constructeur[0].newInstance();
+    			else{
+    			  if(dynamicObjectFieldTypeList.get(i)=="int")
+    				listeDesValeur[i]=Integer.valueOf(dynamicObjectFieldValueList.get(i).getText());//convertir string en int
+    			  else 
+    				listeDesValeur[i]=Float.valueOf(dynamicObjectFieldValueList.get(i).getText());//convertir string en float
+    			  } 
+    	      }
+    		  
+    		  //verifier si l'objet existe dans le pool en fonctin de sa signature
+    		  signature=signature(comboBoxObjectCLass.getSelectionModel().getSelectedItem(),dynamicObjectFieldValueList);
+    		  if(!temporaryPool.containsKey(signature)){
+    			 objet=constructeur[0].newInstance(listeDesValeur);
+    			 //ajouter l'objet creer au poole et a la liste
+    			 temporaryObjectNameList.put(newObjectName.getText(),signature);
+    			 temporaryPool.put(signature, objet);
+       		  }
+    		  else
+    		   //ajouter le nom du nouveau objet a la liste des noms et lui donner comme valeur la signature de l'objet existant
+    		   temporaryObjectNameList.put(newObjectName.getText(),signature);
+    		} 
+    		else{
+    		  //si le constructeur n'a pas de parametre
+    			//verifier si l'objet existe dans le pool en fonctin de sa signature
+      		  signature=signature(comboBoxObjectCLass.getSelectionModel().getSelectedItem(),dynamicObjectFieldValueList);
+      		  if(!temporaryPool.containsKey(signature)){
+      			objet=constructeur[0].newInstance();
+      			 //ajouter l'objet creer au poole et a la liste
+      			 temporaryObjectNameList.put(newObjectName.getText(),signature);
+      			 temporaryPool.put(signature, objet);
+         		  }
+      		  else
+      		   //ajouter le nom du nouveau objet a la liste des noms et lui donner comme valeur la signature de l'objet existant
+      		   temporaryObjectNameList.put(newObjectName.getText(),signature);
+    		   
     		}
     	}
     	catch (InstantiationException|IllegalAccessException|IllegalArgumentException|InvocationTargetException e){
     		// TODO Auto-generated catch block
     		e.printStackTrace();
     	}
-    	System.out.println(">>> objet: "+objet.toString());
   }
+  
+  //cette fonction est appelee par dynamicClassCall pour savoir s'il faut creer un nouveau objet ou retourner un qui est existant
+  //prend en parametres: nom de la classe + valeur de chaque attribut
+  public int signature(String classeName,List<TextField> dynamicObjectFieldValueList){
+	  
+	  int resultat=3,i=0,k=0;
+	  int taille=classeName.length();
+	  for(i=0;i<taille;i++)
+		  resultat=(int) (resultat+classeName.charAt(i)*Math.pow(7, taille-i));
+	  if(!dynamicObjectFieldValueList.isEmpty())
+        for(i=0;i<dynamicObjectFieldValueList.size();i++){
+        	taille=dynamicObjectFieldValueList.get(i).getText().length();
+    	  for(k=0;k<taille;k++)
+    	    resultat=(int) (resultat+dynamicObjectFieldValueList.get(i).getText().charAt(k)*4);
+        }
+	  return resultat;
+  }
+  
   public boolean verifierFormulaire(){
 	  System.out.println(">>> avant delete: "+messageErreur+" Isempty: "+dynamicObjectFieldNameList.isEmpty());
 	messageErreur.setLength(0);//supprimer les anciennes valeurs
@@ -347,7 +393,7 @@ public class CreateObject {
     
 	  
 	//verifier si le nom entrer existe
-	if(temporaryObjectNameList.contains(newObjectName.getText()))
+	if(temporaryObjectNameList.containsKey(newObjectName.getText()))
 	  messageErreur.append("\n- Object name \""+newObjectName.getText()+"\" already exist");
 	
 	  
