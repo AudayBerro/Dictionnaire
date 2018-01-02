@@ -1,0 +1,6 @@
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+.root{
+	-fx-background-image: url("../images/image1.jpg");
+    -fx-background-size: cover;
+	-fx-padding:0px;
+}
