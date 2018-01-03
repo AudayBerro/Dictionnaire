@@ -365,12 +365,12 @@ public class CreateObject {
 	  int resultat=3,i=0,k=0;
 	  int taille=classeName.length();
 	  for(i=0;i<taille;i++)
-		  resultat=(int) (resultat+classeName.charAt(i)*Math.pow(7, taille-i));
+		  resultat=(int) (resultat+classeName.charAt(i)*Math.pow(3+i, 2));
 	  if(!dynamicObjectFieldValueList.isEmpty())
         for(i=0;i<dynamicObjectFieldValueList.size();i++){
         	taille=dynamicObjectFieldValueList.get(i).getText().length();
     	  for(k=0;k<taille;k++)
-    	    resultat=(int) (resultat+dynamicObjectFieldValueList.get(i).getText().charAt(k)*4);
+    	    resultat=(int) (resultat+dynamicObjectFieldValueList.get(i).getText().charAt(k)*Math.pow(3+i, 2));
         }
 	  return resultat;
   }
