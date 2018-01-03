@@ -1,5 +1,10 @@
 package application;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -39,26 +44,36 @@ public class RunObject {
 	private Button resultat2;
 	private TextArea screen;
 	private StringBuilder consoleMessage;
-	public RunObject(Stage owner){
+	private boolean poolPlein=false;//sert a savoir s'il y a des objets dans le pool 
+	
+	public RunObject(Stage owner, HashMap<String,Integer> objectNameList, HashMap<Integer, Object> pool){
 	  primaryStage = new Stage();
 	  primaryStage.initModality(Modality.APPLICATION_MODAL);
 	  primaryStage.initOwner(owner);// Specifies the owner Window (parent) for new window
 		
+	  messageErreur = new StringBuilder();
 	  consoleMessage = new StringBuilder();
 	  errorTexte = new Text("Run Available Object");
 	  screen = new TextArea(">...");
 	  screen.setEditable(false);
 	  
-	  listOfObject = getListOfObject();
-	  
+	  listOfObject = FXCollections.observableArrayList();
 	  comboBoxOfObject1 = new ComboBox<String>();
 	    comboBoxOfObject1.setStyle("-fx-min-width:100");
 	  comboBoxOfObject2 = new ComboBox<String>();
 	    comboBoxOfObject2.setStyle("-fx-min-width:100");
+	  //si le pool est plein true sinon false
+	  poolPlein=getListOfObject(objectNameList);
+	     //remplir comboBoxOfObject1 & comboBoxOfObject2
+	  	 comboBoxOfObject1.setItems(listOfObject);
+	  	 comboBoxOfObject2.setItems(listOfObject);
+	  	 
 	  comboBoxOfMethod1 = new ComboBox<String>();
 	     comboBoxOfMethod1.getItems().addAll("-- methode --","toString","hashCode");
 	  comboBoxOfMethod2 = new ComboBox<String>();
 	     comboBoxOfMethod2.getItems().addAll("-- methode --","equals");
+	     
+	     
 	     
 	  resultat1 = new Button("run");
 	    resultat1.setOnAction(new EventHandler<ActionEvent>(){
@@ -66,11 +81,22 @@ public class RunObject {
 	          if(verifier1()){
 	        	consoleMessage.setLength(0);
 	        	consoleMessage.append(screen.getText());
-	        	consoleMessage.append("\n> appuyer sur le bouton resultat1");
-	    	    screen.setText(new String(consoleMessage));
+	        	methode1(objectNameList.get( comboBoxOfObject1.getSelectionModel().getSelectedItem()),//send selected object1 signature=key
+   	                     pool,
+   	                     comboBoxOfMethod1.getSelectionModel().getSelectedItem() 
+   	                    );
+	        	screen.setText(new String(consoleMessage)); 
 	          }
 	          else{
-	            Alert;
+	        	  Alert alert = new Alert(AlertType.ERROR);
+	    		  alert.setTitle("Error dialog");
+	    		  if(comboBoxOfObject1.getSelectionModel().getSelectedIndex()==0)
+	    		     alert.setHeaderText("Select an Object from the object1 list");
+	    		  else  alert.setHeaderText("Can't  apply metod on \""+comboBoxOfObject1.getSelectionModel().getSelectedItem()+"\" object");
+	    		  
+	    		  String s = new String(messageErreur);
+	    		   alert.setContentText(s);
+	    		   alert.show();  
 	          }
 	        }
 	     }); 
@@ -79,12 +105,24 @@ public class RunObject {
 	        public void handle(ActionEvent e){
 	          if(verifier2()){
 	        	consoleMessage.setLength(0);
-	        	consoleMessage.append(screen.getText());
-	        	consoleMessage.append("\n> appuyer sur le bouton resultat2");
-	    	    screen.setText(new String(consoleMessage));
+		        consoleMessage.append(screen.getText());
+		        methode2(objectNameList.get( comboBoxOfObject1.getSelectionModel().getSelectedItem()),//send selected object1 signature=key
+   	                	 objectNameList.get(comboBoxOfObject2.getSelectionModel().getSelectedItem()),//send selected object2 signature=key
+   	                     pool,
+   	                     comboBoxOfMethod2.getSelectionModel().getSelectedItem() 
+   	                    );
+		        screen.setText(new String(consoleMessage)); 
 	          }
 	          else{
-	        	Alert;
+	        	Alert alert = new Alert(AlertType.ERROR);
+	    		  alert.setTitle("Error dialog");
+	    		if(comboBoxOfObject2.getSelectionModel().getSelectedIndex()==0)
+	    		    alert.setHeaderText("Select an Object from the object2 list");
+	    		else  alert.setHeaderText("Can't  apply metod on \""+comboBoxOfObject2.getSelectionModel().getSelectedItem()+"\" object");
+	    		
+	    		String s = new String(messageErreur);
+	    		alert.setContentText(s);
+	    		alert.show();  
 	          }
 	        }
 	     }); 
@@ -144,25 +182,142 @@ public class RunObject {
 	  VBox vbox = new VBox();
 		 vbox.setPadding(new Insets(10)); 
 	  Button close = new Button("Close");
-         //finish.setDisable(true);//disabled tant que le formulaire n'est pas valide
          close.setOnAction(new EventHandler<ActionEvent>(){
 	        public void handle(ActionEvent e){
 	    	   primaryStage.close(); // return to main window
 	        }
 	     }); 
+         
+      Button clear = new Button("Clear");   
+         clear.setOnAction(new EventHandler<ActionEvent>(){
+	        public void handle(ActionEvent e){
+	          consoleMessage.setLength(0);
+	    	  screen.setText(">...");
+	        }
+	     }); 
       HBox hbox = new HBox(20);
          hbox.setPadding(new Insets(5));
          hbox.setAlignment(Pos.TOP_RIGHT);
-         hbox.getChildren().add(close);        
+         hbox.getChildren().addAll(clear,close);        
       vbox.getChildren().addAll(new Separator(), hbox);  
       return vbox;
     }
 	
-	public ObservableList<String> getListOfObject(){
-      ObservableList<String> liste = FXCollections.observableArrayList();
-		
-	  return liste;
+	//public ObservableList<String> getListOfObject(HashMap<String, Integer> objectNameList)
+	//recupere le nom de chaque objet de la liste des noms rempli par CreateObject
+	public boolean getListOfObject(HashMap<String, Integer> objectNameList){
+		listOfObject.add("-- Object --");
+		if(objectNameList.isEmpty())
+			return false;
+		else{
+		  for(Map.Entry<String,Integer> entry : objectNameList.entrySet())
+			listOfObject.add(entry.getKey());
+		  return true;
+		}
 	}
+	
+	//methode pour objet1: signature=Key(object1)
+	public void methode1(int signature,HashMap<Integer, Object> pool,String methode){
+		Class classe =(pool.get(signature)).getClass();
+		Method[] m = classe.getMethods(); // Obtenir la méthode getNombreDeFeuilles(int)
+		for(Method mt:m){
+		  if(mt.getName()==methode){
+			try {
+			  consoleMessage.append("\n> ")
+			                  .append(comboBoxOfObject1.getSelectionModel().getSelectedItem())
+			                    .append(".")
+			                      .append(methode)
+			                        .append("(): ")
+			                          .append(mt.invoke(pool.get(signature),null));
+			} catch (IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		  }
+		}
+	  //consoleMessage.append("error on \""+methode+"\"call");
+	}
+	
+	//methode pour objet2: signature1=Key(objet1) & signature2=Key(objet2)
+    public void methode2(int signature1,int signature2,HashMap<Integer, Object> pool,String methode){
+    	Class classe =(pool.get(signature1)).getClass();
+		Method[] m = classe.getMethods(); // Obtenir la méthode getNombreDeFeuilles(int)
+		for(Method mt:m)
+		  if(mt.getName()==methode){
+			try {
+			  consoleMessage.append("\n> ")
+			                  .append(comboBoxOfObject1.getSelectionModel().getSelectedItem())
+			                    .append(".")
+			                      .append(methode)
+			                        .append("(")
+			                          .append(comboBoxOfObject2.getSelectionModel().getSelectedItem())
+			                            .append("): ")
+			                              .append(mt.invoke(pool.get(signature1),pool.get(signature2)));
+			} catch (IllegalAccessException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		  }
+		
+	}
+    
+    public boolean verifier1(){
+      messageErreur.setLength(0);//supprimer les anciennes valeurs
+      if(poolPlein==false){
+      	messageErreur.append("The POOl is empty. Create object first!");
+      	return false;
+      }      
+      messageErreur.setLength(0);//supprimer les anciennes valeurs
+  	  //verifier si on a entrer un nom
+  	  if(comboBoxOfObject1.getSelectionModel().getSelectedIndex()==0)
+  		  messageErreur.append("\n- Select Object1");
+  	  
+  	  //verifier si le nom entrer existe
+  	  if(comboBoxOfMethod1.getSelectionModel().getSelectedIndex()==0)
+  		  messageErreur.append("\n- Select a method");
+  	  
+  	  if(messageErreur.length()==0)
+  	   return true;
+  	  else return false;
+    }
+    
+    public boolean verifier2(){
+      messageErreur.setLength(0);//supprimer les anciennes valeurs
+      if(poolPlein==false){
+    	messageErreur.append("The POOl is empty. Create object first!");
+    	return false;
+      }
+      //verifier si on a entrer un nom
+      if(comboBoxOfObject1.getSelectionModel().getSelectedIndex()==0)
+    	  messageErreur.append("\n- Select Object1");
+    	  
+      //verifier si le nom entrer existe
+      if(comboBoxOfMethod1.getSelectionModel().getSelectedIndex()==0)
+    	  messageErreur.append("\n- Select a method");
+    	  
+      if(comboBoxOfObject2.getSelectionModel().getSelectedIndex()==0)  
+    	  messageErreur.append("\n- Select Object2");
+      
+      if(comboBoxOfMethod2.getSelectionModel().getSelectedIndex()==0)
+    	  messageErreur.append("\n- Select a method");
+    	  
+      if(messageErreur.length()==0)
+    	return true;
+      else return false;
+    }
+	
 	/*
 	public ObservableList<String> getListOfObject1Method(){
 	  ObservableList<String> liste = FXCollections.observableArrayList();
