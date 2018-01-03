@@ -1,13 +1,16 @@
 package application;
 	
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -20,10 +23,14 @@ public class Main extends Application {
 	
 	private NewClass newCLassGUI;
 	private CreateObject createObjectGui;
-	private List<String> objectNameList;//contient la liste des noms des objects crees pour ne pas avoir deux noms identiques
+	private RunObject runObjectGUI;
+	private HashMap<String, Integer> objectNameList;//contient la liste des noms des objects crees pour ne pas avoir deux noms identiques
+	private HashMap<Integer, Object> pool;
+	
 	public void start(Stage primaryStage) {
 	  try {
-		 objectNameList = new ArrayList<String>();
+		 objectNameList = new HashMap<String,Integer>();
+		 pool = new HashMap<Integer,Object>();
 		//create MenuBar
 		MenuBar menu = new MenuBar();
 		 //create Menu
@@ -44,13 +51,15 @@ public class Main extends Application {
 		       newObjectItem.setOnAction(new EventHandler<ActionEvent>(){
 		    	 public void handle(ActionEvent e){
 		    		//open a new object GUI
-		    		 createObjectGui = new CreateObject(primaryStage,objectNameList);
+		    		 createObjectGui = new CreateObject(primaryStage,objectNameList,pool);
+		    		 
 		    	 }
 		       });
 		  MenuItem runObjectItem = new MenuItem("Run Object");
 		  	   runObjectItem.setOnAction(new EventHandler<ActionEvent>(){
 		    	 public void handle(ActionEvent e){
 		    		//open a run object GUI
+		    		 runObjectGUI =new RunObject(primaryStage);
 		    	 }
 		       });
 		  MenuItem exitItem = new MenuItem("Exit");
