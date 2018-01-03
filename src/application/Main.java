@@ -59,7 +59,7 @@ public class Main extends Application {
 		  	   runObjectItem.setOnAction(new EventHandler<ActionEvent>(){
 		    	 public void handle(ActionEvent e){
 		    		//open a run object GUI
-		    		 runObjectGUI =new RunObject(primaryStage);
+		    		 runObjectGUI =new RunObject(primaryStage,objectNameList,pool);
 		    	 }
 		       });
 		  MenuItem exitItem = new MenuItem("Exit");
