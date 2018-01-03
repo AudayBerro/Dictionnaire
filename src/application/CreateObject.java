@@ -95,16 +95,11 @@ public class CreateObject {
         root.setCenter(getCenterPane());
         
          finish = new Button("finish");
-	     //finish.setDisable(true);//disabled tant que le formulaire n'est pas valide
 	     finish.setOnAction(new EventHandler<ActionEvent>(){
 		      public void handle(ActionEvent e){
 		    	  if(verifierFormulaire()){
 		    	    try {
 						dynamicClassCall();
-					    //afin de remplir les 3 listes
-		    		    //createNewObject(newObjectName.getText());
-						//cette fonction prendra les parametres des trois listes remplie par dynamicClassCall()
-		    		 
 		    		    //ajouter le nouveau nom a la liste de nom
 		    		    objectNameList.clear();
 		    		    objectNameList.putAll(temporaryObjectNameList);
@@ -307,9 +302,6 @@ public class CreateObject {
 	//...dynamicObjectFieldTypeList ====> rempli par getAttributField()
 	//...dynamicObjectFieldNameList ====> rempli par getAttributField()
 	//...dynamicObjectFieldValueList ====> valeur entree par l'utilisateur
-	 // Class c = Class.forName("org.wikibooks.fr.Livre"); // Accès à la classe Livre
-     //Constructor constr = c.getConstructor(String.class, int.class); // Obtenir le constructeur (String, int)
-     //Object o = constr.newInstance("Programmation Java", 120); // -> new Livre("Programmation Java", 120);
     int signature=-2;
 	Class maClasse= Class.forName("fichierCreer."+comboBoxObjectCLass.getSelectionModel().getSelectedItem());
 	Constructor[] constructeur = maClasse.getConstructors();
