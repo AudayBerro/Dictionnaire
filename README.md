@@ -1,4 +1,7 @@
-# Dicotionnaire
-Create java source code, compile & save it  
-Create object & save it 
-Do that @runtime from a GUI
+# Dictionnaire
+A simple JavaFX interface that simulate an IDE.
+
+- Write java source code, execute and save it.  
+- Instantiate objects and save them for later use.
+- Reuse previous classes and objects, add new ones.
+- Do this at runtime.
